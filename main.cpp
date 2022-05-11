@@ -365,8 +365,34 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	pipelineDesc.RasterizerState.DepthClipEnable = true;//深度クリッピングを有効に
 
 	//ブレンドステート
-	pipelineDesc.BlendState.RenderTarget[0].RenderTargetWriteMask
-		= D3D12_COLOR_WRITE_ENABLE_ALL;//RBGA全てのチャンネルを描画
+	//レンダーターゲットビューのブレンド設定
+	D3D12_RENDER_TARGET_BLEND_DESC& blenddesc = pipelineDesc.BlendState.RenderTarget[0];
+	blenddesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;  //RBGA全てのチャンネルを描画
+
+	blenddesc.BlendEnable = true;                    //ブレンドを有効にする
+	blenddesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;     //加算
+	blenddesc.SrcBlendAlpha = D3D12_BLEND_ONE;       //ソースの値を100%使う
+	blenddesc.DestBlendAlpha = D3D12_BLEND_ZERO;     //デストの値を0%使う
+
+	//加算合成
+	blenddesc.BlendOp = D3D12_BLEND_OP_ADD;          //加算
+	blenddesc.SrcBlend = D3D12_BLEND_ONE;            //ソースの値を100%使う
+	blenddesc.DestBlend = D3D12_BLEND_ONE;           //デストの値を100%使う
+
+	//減算合成
+	blenddesc.BlendOp = D3D12_BLEND_OP_REV_SUBTRACT; //デストからソースを減算
+	blenddesc.SrcBlend = D3D12_BLEND_ONE;            //ソースの値を100%使う
+	blenddesc.DestBlend = D3D12_BLEND_ONE;           //デストの値を100%使う
+
+	//色反転
+	blenddesc.BlendOp = D3D12_BLEND_OP_ADD;          //加算
+	blenddesc.SrcBlend = D3D12_BLEND_INV_DEST_COLOR; //1.0f-デストカラーの値
+	blenddesc.DestBlend = D3D12_BLEND_ZERO;          //使わない
+
+	//半透明合成
+	blenddesc.BlendOp = D3D12_BLEND_OP_ADD;          //加算
+	blenddesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;      //ソースのアルファ値
+	blenddesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA; //1.0f-ソースのアルファ値
 
 	//頂点レイアウトの設定
 	pipelineDesc.InputLayout.pInputElementDescs = inputLayout;
@@ -460,13 +486,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//4.描画コマンドここから
 		//ビューポート設定コマンド
-		D3D12_VIEWPORT viewport{};
-		viewport.Width = window_width;
-		viewport.Height = window_height;
-		viewport.TopLeftX = 0;
-		viewport.TopLeftY = 0;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
+		D3D12_VIEWPORT viewport{};           
+		viewport.Width = window_width;       //横幅
+		viewport.Height = window_height;     //縦幅
+		viewport.TopLeftX = 0;               //左上X
+		viewport.TopLeftY = 0;               //左上Y
+		viewport.MinDepth = 0.0f;            //最小深度(0でよい)
+		viewport.MaxDepth = 1.0f;            //最大深度(1でよい)
 		//ビューポート設定コマンドを、コマンドリストに積む
 		commandList->RSSetViewports(1, &viewport);
 
