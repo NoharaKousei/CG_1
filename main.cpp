@@ -261,7 +261,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(result));
 
 	//値を書き込むと自動的に転送される
-	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);    //RGBAで半透明の赤
+	constMapMaterial->color = XMFLOAT4(1,1,1,1);    //RGBAで半透明の赤
 
 	//ルートパラメータの設定
 	D3D12_ROOT_PARAMETER rootParam = {};
@@ -275,9 +275,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//頂点データ
 	XMFLOAT3 vertices[] = {
+		
 		{-0.5f,-0.5f,0.0f},//xが-で左 yが-で下 左下
-		{-0.5f,+0.5f,0.0f},//xが-で左 yが+で上 左上
 		{+0.5f,-0.5f,0.0f},//xが+で右 yが-で下 右下
+		{-0.5f,0.5f,0.0f},//左中
+		{+0.5f,0.5f,0.0f},//右中
+		{-0.5f,+0.5f,0.0f},//xが-で左 yが+で上 左上
+		{+0.5f,+0.5f,0.0f} //xが+で右 yが+で上 右上
+
 	};
 	//頂点データ全体のサイズ = 頂点データ一つ分のサイズ + 頂点データの要素数
 	UINT sizeVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(vertices));
