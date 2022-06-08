@@ -4,6 +4,7 @@
 #include <cassert>
 #include <vector>
 #include <string>
+#include <DirectXTex.h>
 
 #include <DirectXMath.h>
 using namespace DirectX;
@@ -201,26 +202,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	result = device->CreateFence(fenceVal, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
-	//DirectInputの初期化
-	IDirectInput8* directInput = nullptr;
-	result = DirectInput8Create(
-		w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
-		(void**)&directInput, nullptr);
-	assert(SUCCEEDED(result));
+	////DirectInputの初期化
+	//IDirectInput8* directInput = nullptr;
+	//result = DirectInput8Create(
+	//	w.hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
+	//	(void**)&directInput, nullptr);
+	//assert(SUCCEEDED(result));
 
-	//キーボードデバイスの生成
-	IDirectInputDevice8* keyboard = nullptr;
-	result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
-	assert(SUCCEEDED(result));
+	////キーボードデバイスの生成
+	//IDirectInputDevice8* keyboard = nullptr;
+	//result = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+	//assert(SUCCEEDED(result));
 
-	//入力データ形式のセット
-	result = keyboard->SetDataFormat(&c_dfDIKeyboard);  //標準形式
-	assert(SUCCEEDED(result));
+	////入力データ形式のセット
+	//result = keyboard->SetDataFormat(&c_dfDIKeyboard);  //標準形式
+	//assert(SUCCEEDED(result));
 
-	//排他制御レベルのセット
-	result = keyboard->SetCooperativeLevel(
-		hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-	assert(SUCCEEDED(result));
+	////排他制御レベルのセット
+	//result = keyboard->SetCooperativeLevel(
+	//	hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+	//assert(SUCCEEDED(result));
 
 
 	//DirectX初期化処理 ここまで
@@ -573,22 +574,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(result));
 
 
-	//横方向ピクセル数
-	const size_t textureWidth = 256;
-	//縦方向ピクセル数
-	const size_t textureHeight = 256;
-	//配列の要素数
-	const size_t imageDataCount = textureWidth * textureHeight;
-	//画像イメージデータ配列
-	XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];  //必ず後で解放する
+	////横方向ピクセル数
+	//const size_t textureWidth = 256;
+	////縦方向ピクセル数
+	//const size_t textureHeight = 256;
+	////配列の要素数
+	//const size_t imageDataCount = textureWidth * textureHeight;
+	////画像イメージデータ配列
+	//XMFLOAT4* imageData = new XMFLOAT4[imageDataCount];  //必ず後で解放する
 
-	//全ピクセルの色を初期化
-	for (size_t i = 0; i < imageDataCount; i++) {
-		imageData[i].x = 1.0f;   //R
-		imageData[i].y = 0.0f;   //G
-		imageData[i].z = 0.0f;   //B
-		imageData[i].w = 1.0f;   //A
+	////全ピクセルの色を初期化
+	//for (size_t i = 0; i < imageDataCount; i++) {
+	//	imageData[i].x = 1.0f;   //R
+	//	imageData[i].y = 0.0f;   //G
+	//	imageData[i].z = 0.0f;   //B
+	//	imageData[i].w = 1.0f;   //A
+	//}
+
+	TexMetadata metadata{};
+	ScratchImage scratchImg{};
+	//WICテクスチャのロード
+	result = LoadFromWICFile(
+		L"Resources/LIFE.png",
+		WIC_FLAGS_NONE,
+		&metadata, scratchImg);
+
+	ScratchImage mipChain{};
+	//ミニマップ生成
+	result = GenerateMipMaps(
+		scratchImg.GetImages(), scratchImg.GetImageCount(), scratchImg.GetMetadata(),
+		TEX_FILTER_DEFAULT, 0, mipChain);
+	if (SUCCEEDED(result)) {
+		scratchImg = std::move(mipChain);
+		metadata = scratchImg.GetMetadata();
 	}
+	//読み込んだディフューズテクスチャをSRGBとして扱う
+	metadata.format = MakeSRGB(metadata.format);
 
 	//ヒープ設定
 	D3D12_HEAP_PROPERTIES textureHeapProp{};
@@ -600,11 +621,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//リソース設定
 	D3D12_RESOURCE_DESC textureResourceDesc{};
 	textureResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	textureResourceDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	textureResourceDesc.Width = textureWidth;   //幅
-	textureResourceDesc.Height = textureWidth;  //高さ
-	textureResourceDesc.DepthOrArraySize = 1;
-	textureResourceDesc.MipLevels = 1;
+	textureResourceDesc.Format = metadata.format;
+	textureResourceDesc.Width = metadata.width;   //幅
+	textureResourceDesc.Height = (UINT)metadata.height;  //高さ
+	textureResourceDesc.DepthOrArraySize = (UINT16)metadata.arraySize;
+	textureResourceDesc.MipLevels = (UINT16)metadata.mipLevels;
 	textureResourceDesc.SampleDesc.Count = 1;
 
 	//テクスチャバッファの生成
@@ -617,17 +638,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		nullptr,
 		IID_PPV_ARGS(&texBuff));
 
-	//テクスチャバッファにデータ転送
-	result = texBuff->WriteToSubresource(
-		0,
-		nullptr,                              //全領域へコピー
-		imageData,                            //元データアドレス
-		sizeof(XMFLOAT4) * textureWidth,      //1ラインサイズ
-		sizeof(XMFLOAT4) * imageDataCount     //全サイズ
-	);
+	////テクスチャバッファにデータ転送
+	//result = texBuff->WriteToSubresource(
+	//	0,
+	//	nullptr,                              //全領域へコピー
+	//	imageData,                            //元データアドレス
+	//	sizeof(XMFLOAT4) * textureWidth,      //1ラインサイズ
+	//	sizeof(XMFLOAT4) * imageDataCount     //全サイズ
+	//);
+
+	//全ミップマップについて
+	for (size_t i = 0; i < metadata.mipLevels; i++) {
+		//ミップマップレベルを指定してイメージを取得
+		const Image* img = scratchImg.GetImage(i, 0, 0);
+		//テクスチャバッファにデータ転送
+		result = texBuff->WriteToSubresource(
+			(UINT)i,
+			nullptr,
+			img->pixels,
+			(UINT)img->rowPitch,
+			(UINT)img->slicePitch
+		);
+		assert(SUCCEEDED(result));
+	}
 
 	//元データ解放
-	delete[] imageData;
+	//delete[] imageData;
 
 	//SRVの最大個数
 	const size_t kMaxSRVCount = 2056;
@@ -648,20 +684,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//シェーダリソースビュー設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};               //設定構造体
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;         //RGBA  float
+	srvDesc.Format = resDesc.Format;         //RGBA  float
 	srvDesc.Shader4ComponentMapping =
 	D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;   //2Dテクスチャ
-	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MipLevels = resDesc.MipLevels;
 
 	//ハンドルの指す位置にシェーダーリソース作成
 	device->CreateShaderResourceView(texBuff, &srvDesc, srvHandle);
-
-	
-
-
-
-
 
 
 
@@ -679,18 +709,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//DirectX毎フレーム処理 ここから
 
-		//キーボード情報の取得開始
-		keyboard->Acquire();
+		////キーボード情報の取得開始
+		//keyboard->Acquire();
 
 		//全キーの入力状態を取得する
 		BYTE key[256] = {};
-		keyboard->GetDeviceState(sizeof(key), key);
+		//keyboard->GetDeviceState(sizeof(key), key);
 
 		//数字の0キーが押されていたら
-		if (key[DIK_0])
-		{
-			OutputDebugStringA("Hit 0\n"); //出力ウィンドウに[Hit 0]と表示
-		}
+		//if (key[DIK_0])
+		//{
+		//	OutputDebugStringA("Hit 0\n"); //出力ウィンドウに[Hit 0]と表示
+		//}
 
 		
 
@@ -776,6 +806,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;//描画状態から
 		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;//表示状態へ
 		commandList->ResourceBarrier(1, &barrierDesc);
+
 
 		//命令のクローズ
 		result = commandList->Close();
