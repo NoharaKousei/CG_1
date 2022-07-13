@@ -268,12 +268,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	result = constBuffTransform->Map(0, nullptr, (void**)&constMapTransform);  //マッピング
 	assert(SUCCEEDED(result));
 
-	//単位行列を代入
-	constMapTransform->mat = XMMatrixIdentity();
-	constMapTransform->mat.r[0].m128_f32[0] = 2.0f / 1280;
-	constMapTransform->mat.r[1].m128_f32[1] = -2.0f / 720;
-	constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
-	constMapTransform->mat.r[3].m128_f32[1] = 1.0f;
+	////単位行列を代入
+	//constMapTransform->mat = XMMatrixIdentity();
+	//constMapTransform->mat.r[0].m128_f32[0] = 2.0f / 1280;
+	//constMapTransform->mat.r[1].m128_f32[1] = -2.0f / 720;
+	//constMapTransform->mat.r[3].m128_f32[0] = -1.0f;
+	//constMapTransform->mat.r[3].m128_f32[1] = 1.0f;
+
+	//平行投影行列の計算
+	constMapTransform->mat = XMMatrixOrthographicOffCenterLH(
+		2.0f/1280, -2.0f/720,
+		-1.0f,1.0f,
+		0.0f,1.0f
+	);
+
+
+	//射影変換行列(透視投影)
+	XMMATRIX matProjection =
+	XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(45.0f),
+		(float)window_width / window_height,
+		0.1f, 1000.0f
+	);
+
+	//定数バッファに転送
+	constMapTransform->mat = matProjection;
 
 #pragma endregion
 
@@ -354,10 +373,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//   x       y      z       u     v
 
-		{{  0.0f, 100.0f, 0.0f}, {0.0f, 1.0f}},
-		{{  0.0f,   0.0f, 0.0f}, {0.0f, 0.0f}},
-		{{100.0f, 100.0f, 0.0f}, {1.0f, 1.0f}},
-		{{100.0f,   0.0f, 0.0f}, {1.0f, 0.0f}},
+		{{ -50.0f, -50.0f, 50.0f}, {0.0f, 1.0f}},
+		{{ -50.0f,  50.0f, 50.0f}, {0.0f, 0.0f}},
+		{{  50.0f, -50.0f, 50.0f}, {1.0f, 1.0f}},
+		{{  50.0f,  50.0f, 50.0f}, {1.0f, 0.0f}},
 
 	};
 
