@@ -43,6 +43,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	const int window_width = 1280;//横軸
 	const int window_height = 720;//縦軸
 
+	float  iro1 = 0.0f;
+	float  iro2 = 0.0f;
+	float  iro3 = 0.0f;
+	
+
 	//ウィンドウクラスの設定
 	WNDCLASSEX w{};
 	w.cbSize = sizeof(WNDCLASSEX);
@@ -260,8 +265,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	result = constBuffMaterial->Map(0, nullptr, (void**)&constMapMaterial);  //マッピング
 	assert(SUCCEEDED(result));
 
-	//値を書き込むと自動的に転送される
-	constMapMaterial->color = XMFLOAT4(1, 0, 0, 0.5f);    //RGBAで半透明の赤
+	
 
 	//ルートパラメータの設定
 	D3D12_ROOT_PARAMETER rootParam = {};
@@ -541,6 +545,47 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			FLOAT clearColor[] = { 1.0f,1.0f,1.0f,1.0f };
 			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		}
+
+		//値を書き込むと自動的に転送される
+		constMapMaterial->color = XMFLOAT4(iro1, iro2, iro3, 1.0f); //RGBAで半透明の赤
+
+		if (key[DIK_A]) {
+			iro1 = iro1 + 0.01f;
+		}
+
+		if (key[DIK_S]) {
+			iro2 = iro2 + 0.01f;
+		}
+
+		if (key[DIK_D]) {
+			iro3 = iro3 + 0.01f;
+		}
+
+		if (key[DIK_F]) {
+			iro1 = iro1 - 0.01f;
+		}
+
+		if (key[DIK_G]) {
+			iro2 = iro2 - 0.01f;
+		}
+
+		if (key[DIK_H]) {
+			iro3 = iro3 - 0.01f;
+		}
+
+		if (key[DIK_J]){
+			iro1 = 1.0f;
+			iro2 = 1.0f;
+			iro3 = 1.0f;
+		}
+
+		if (key[DIK_K]) {
+			iro1 = 0.0f;
+			iro2 = 0.0f;
+			iro3 = 0.0f;
+		}
+
+		
 
 		//4.描画コマンドここから
 		//ビューポート設定コマンド
